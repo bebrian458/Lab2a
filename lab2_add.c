@@ -3,14 +3,18 @@
 #include <getopt.h>	
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
 
 // Global variables
-int numthreads = 1, numIters = 1;
+int numthreads = 1, numIters = 1, opt_yield = 0;
+char m_sync = 0;
 
 
 // Basic add routine
 void add(long long *pointer, long long value){
         long long sum = *pointer + value;
+        if(opt_yield)
+        	sched_yield();
         *pointer = sum;
 }
 
@@ -51,16 +55,24 @@ int main(int argc, char *argv[]){
 	struct option longopts[] = {
 		{"threads", 	required_argument, 	NULL, 't'},
 		{"iterations", 	required_argument, 	NULL, 'i'},
+		{"yield", 		no_argument, 		NULL, 'y'},
+		{"m_sync", 		required_argument, 	NULL, 's'},
 		{0,0,0,0}
 	};
 
-	while((opt = getopt_long(argc, argv, "t:i:", longopts, NULL)) != -1){
+	while((opt = getopt_long(argc, argv, "t:i:y", longopts, NULL)) != -1){
 		switch(opt){
 			case 't':
 				numthreads = atoi(optarg);
 				break;
 			case 'i':
 				numIters = atoi(optarg);
+				break;
+			case 'y':
+				opt_yield = 1;
+				break;
+			case 's':
+				m_sync = *optarg;
 				break;
 			default:
 				fprintf(stderr, "Usage: ./lab1b [--threads=numthreads] [--iterations=iterations]\n");
@@ -111,10 +123,28 @@ int main(int argc, char *argv[]){
 	long long total_time = 1000000000 * (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec);
 	long long avg_time_per_op = total_time/numops;
 
+	// Create name
+	char message[15] = "add";
+	if(opt_yield){
+		const char name[7] = "-yield";
+		strcat(message, name);
+	}
+	if(m_sync == 'm'){
+		const char name[3] = "-m";
+		strcat(message, name);
+	}
+	else if(m_sync == 's'){
+		const char name[3] = "-s";
+		strcat(message, name);
+	}
+	else{
+		const char name[6] = "-none";
+		strcat(message, name);
+	}
 
 	// Print CSV
-	fprintf(stdout, "add-none,%d,%d,%d,%lld,%lld,%lld\n",
-		numthreads,numIters,numops,total_time,avg_time_per_op,counter);
+	fprintf(stdout, "%s,%d,%d,%d,%lld,%lld,%lld\n",
+		message,numthreads,numIters,numops,total_time,avg_time_per_op,counter);
 
 	return 0;
 }
