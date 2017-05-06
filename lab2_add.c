@@ -6,9 +6,9 @@
 #include <string.h>
 
 // Global variables
-int numthreads = 1, numIters = 1, opt_yield = 0;
+int numthreads = 1, numIters = 1, opt_yield = 0, sync_lock = 0;
 char m_sync = 0;
-
+pthread_mutex_t mutex;
 
 // Basic add routine
 void add(long long *pointer, long long value){
@@ -25,17 +25,69 @@ void* worker(void* counter){
 	int i;
 	for(i = 0; i < numIters; i++){
 
+		// Mutex
+		if(m_sync == 'm'){
+			pthread_mutex_lock(&mutex);
+			add((long long *)counter, 1);
+			pthread_mutex_unlock(&mutex);
+		}
+
+		// Spin-lock
+		else if(m_sync == 's'){
+			while(__sync_lock_test_and_set(&sync_lock, 1))
+				;
+			add((long long *) counter, 1);
+			__sync_lock_release(&sync_lock);
+		}
+
+		// Compare-and-swap
+		else if(m_sync == 'c'){
+			long long old, new;
+			do{
+				old = *(long long *)counter;
+				new = old + 1;
+				if(opt_yield)
+					sched_yield();
+			}while(__sync_val_compare_and_swap((long long*)counter, old, new) != old);
+		}
+
 		// Without locks
-		add((long long *) counter, 1);
-//			fprintf(stderr, "%lld\n", *((long long*)counter));
+		else
+			add((long long *) counter, 1);
+//		fprintf(stderr, "%lld\n", *((long long*)counter));
 	}
 
 	// Add by -1
 	int j;
 	for(j = 0; j < numIters; j++){
 
+		// Mutex
+		if(m_sync == 'm'){
+			pthread_mutex_lock(&mutex);
+			add((long long *)counter, -1);
+			pthread_mutex_unlock(&mutex);
+		}
+
+		// Spin-lock
+		else if(m_sync == 's'){
+			while(__sync_lock_test_and_set(&sync_lock, 1))
+				;
+			add((long long *) counter, -1);
+			__sync_lock_release(&sync_lock);
+		}
+
+		// Compare-and-swap
+		else if(m_sync == 'c'){
+			long long old, new;
+			do{
+				old = *(long long *)counter;
+				new = old - 1;
+			}while(__sync_val_compare_and_swap((long long *)counter, old, new) != old);
+		}
+
 		// Without locks
-		add((long long *) counter, -1);
+		else
+			add((long long *) counter, -1);
 //		fprintf(stderr, "%lld\n", *((long long*)counter));
 
 	}
@@ -60,7 +112,7 @@ int main(int argc, char *argv[]){
 		{0,0,0,0}
 	};
 
-	while((opt = getopt_long(argc, argv, "t:i:y", longopts, NULL)) != -1){
+	while((opt = getopt_long(argc, argv, "t:i:ys:", longopts, NULL)) != -1){
 		switch(opt){
 			case 't':
 				numthreads = atoi(optarg);
@@ -81,6 +133,9 @@ int main(int argc, char *argv[]){
 		}
 	}
 
+	// Initialize mutex
+	if(m_sync == 'm')
+		pthread_mutex_init(&mutex, NULL);
 
 	// Start timer
 	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
@@ -135,6 +190,10 @@ int main(int argc, char *argv[]){
 	}
 	else if(m_sync == 's'){
 		const char name[3] = "-s";
+		strcat(message, name);
+	}
+	else if(m_sync == 'c'){
+		const char name[3] = "-c";
 		strcat(message, name);
 	}
 	else{
