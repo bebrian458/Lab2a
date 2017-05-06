@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
+#include <ctype.h> // isdigit()
 
 // Global variables
 int numthreads = 1, numIters = 1, opt_yield = 0, sync_lock = 0;
@@ -108,7 +109,7 @@ int main(int argc, char *argv[]){
 		{"threads", 	required_argument, 	NULL, 't'},
 		{"iterations", 	required_argument, 	NULL, 'i'},
 		{"yield", 		no_argument, 		NULL, 'y'},
-		{"m_sync", 		required_argument, 	NULL, 's'},
+		{"sync", 		required_argument, 	NULL, 's'},
 		{0,0,0,0}
 	};
 
@@ -116,18 +117,30 @@ int main(int argc, char *argv[]){
 		switch(opt){
 			case 't':
 				numthreads = atoi(optarg);
+				if(!isdigit(*optarg)){
+					fprintf(stderr, "Incorrect argument for threads. Input an integer or use default of value 1\n");
+					exit(2);
+				}
 				break;
 			case 'i':
 				numIters = atoi(optarg);
+				if(!isdigit(*optarg)){
+					fprintf(stderr, "Incorrect argument for iterations. Input an integer or use default of value 1\n");
+					exit(2);
+				}
 				break;
 			case 'y':
 				opt_yield = 1;
 				break;
 			case 's':
 				m_sync = *optarg;
+				if(m_sync != 'm' && m_sync != 's' && m_sync != 'c'){
+					fprintf(stderr, "Incorrect argument for sync. Use m for mutex, s for spin-lock, or c for comapre-and-swap\n");
+					exit(2);
+				}
 				break;
 			default:
-				fprintf(stderr, "Usage: ./lab1b [--threads=numthreads] [--iterations=iterations]\n");
+				fprintf(stderr, "Usage: ./lab1b [--threads=numthreads] [--iterations=iterations] [--yield] [--sync=[m, s, or c]]\n");
 				exit(1);
 				break;
 		}
