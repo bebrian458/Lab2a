@@ -29,77 +29,83 @@ void check_sync(){
 
 // Thread routine
 void* worker(void* counter){
-
+		
 	// Add by 1
 	int i;
 	for(i = 0; i < numIters; i++){
+		
+		long long old, new;
+		switch(m_sync){
+		
+			// Mutex
+			case 'm':
+				pthread_mutex_lock(&mutex);
+				add((long long *)counter, 1);
+				pthread_mutex_unlock(&mutex);
+				break;
 
-		// Mutex
-		if(m_sync == 'm'){
-			pthread_mutex_lock(&mutex);
-			add((long long *)counter, 1);
-			pthread_mutex_unlock(&mutex);
+			// Spin-lock
+			case 's':
+				while(__sync_lock_test_and_set(&spin_lock, 1))
+					;
+				add((long long *) counter, 1);
+				__sync_lock_release(&spin_lock);
+				break;
+
+			// Compare-and-swap
+			case 'c':
+				do{
+					old = *(long long *)counter;
+					new = old + 1;
+					if(opt_yield)
+						sched_yield();
+				}while(__sync_val_compare_and_swap((long long*)counter, old, new) != old);
+				break;
+
+			// Without locks
+			default:
+				add((long long *) counter, 1);
 		}
-
-		// Spin-lock
-		else if(m_sync == 's'){
-			while(__sync_lock_test_and_set(&spin_lock, 1))
-				;
-			add((long long *) counter, 1);
-			__sync_lock_release(&spin_lock);
-		}
-
-		// Compare-and-swap
-		else if(m_sync == 'c'){
-			long long old, new;
-			do{
-				old = *(long long *)counter;
-				new = old + 1;
-				if(opt_yield)
-					sched_yield();
-			}while(__sync_val_compare_and_swap((long long*)counter, old, new) != old);
-		}
-
-		// Without locks
-		else
-			add((long long *) counter, 1);
-//		fprintf(stderr, "%lld\n", *((long long*)counter));
 	}
 
 	// Add by -1
 	int j;
 	for(j = 0; j < numIters; j++){
+		
+		long long old, new;
+		switch(m_sync){
+		
+			// Mutex
+			case 'm':
+				pthread_mutex_lock(&mutex);
+				add((long long *)counter, -1);
+				pthread_mutex_unlock(&mutex);
+				break;
 
-		// Mutex
-		if(m_sync == 'm'){
-			pthread_mutex_lock(&mutex);
-			add((long long *)counter, -1);
-			pthread_mutex_unlock(&mutex);
+			// Spin-lock
+			case 's':
+				while(__sync_lock_test_and_set(&spin_lock, 1))
+					;
+				add((long long *) counter, -1);
+				__sync_lock_release(&spin_lock);
+				break;
+
+			// Compare-and-swap
+			case 'c':
+				do{
+					old = *(long long *)counter;
+					new = old - 1;
+					if(opt_yield)
+						sched_yield();
+				}while(__sync_val_compare_and_swap((long long*)counter, old, new) != old);
+				break;
+
+			// Without locks
+			default:
+				add((long long *) counter, -1);
 		}
-
-		// Spin-lock
-		else if(m_sync == 's'){
-			while(__sync_lock_test_and_set(&spin_lock, 1))
-				;
-			add((long long *) counter, -1);
-			__sync_lock_release(&spin_lock);
-		}
-
-		// Compare-and-swap
-		else if(m_sync == 'c'){
-			long long old, new;
-			do{
-				old = *(long long *)counter;
-				new = old - 1;
-			}while(__sync_val_compare_and_swap((long long *)counter, old, new) != old);
-		}
-
-		// Without locks
-		else
-			add((long long *) counter, -1);
-//		fprintf(stderr, "%lld\n", *((long long*)counter));
-
 	}
+
 	return NULL;
 }	
 
