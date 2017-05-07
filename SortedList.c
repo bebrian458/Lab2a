@@ -1,5 +1,6 @@
 #include "SortedList.h"
 #include <string.h>
+#include <sched.h>
 
 
 void SortedList_insert(SortedList_t *list, SortedListElement_t *element){
@@ -38,11 +39,11 @@ void SortedList_insert(SortedList_t *list, SortedListElement_t *element){
 	curr->prev = element;
 }
 
-int SortedList_delete( SortedListElement_t *element){
+int SortedList_delete(SortedListElement_t *element){
 
 	// If there is no element to delete, do nothing
 	if(element == NULL)
-		return;
+		return 0;
 
 	// Check to make sure pointers are not corrupted
 	if(element->prev->next == element->next->prev){
@@ -64,7 +65,7 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key){
 
 	// If there is no list or no key, do nothing
 	if(list == NULL || key == NULL)
-		return;
+		return NULL;
 
 	// Start from where head's (list) next is pointing to
 	SortedListElement_t *curr = list->next;
@@ -74,10 +75,10 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key){
 	while(curr != list){
 
 		// If an element has a matching key
-		if(strcmp(curr->key, key) == 0){
+		if(strcmp(curr->key, key) == 0)
 			return curr;
 
-		if(opt_yield & SEARCH_YIELD)
+		if(opt_yield & LOOKUP_YIELD)
 			sched_yield();
 
 		// Otherwise, move on to the next thing in the list
@@ -90,23 +91,25 @@ SortedListElement_t *SortedList_lookup(SortedList_t *list, const char *key){
 
 int SortedList_length(SortedList_t *list){
 
+	// Default is no elements yet counted
+	int counter = 0;
+
 	// If there is no list, do nothing
 	if(list == NULL)
-		return;
+		return counter;
 
 	// Start from where head's (list) next is pointing to
 	SortedListElement_t *curr = list->next;
 	
 	// Iterate through list until we find corruption in list
 	// or until we loop back to the head
-	int counter = 0;
 	while(curr != list){
 
 		// Check for corrupted pointers around curr element
 		if(curr->prev->next != curr->next->prev)
 			return -1;
 
-		if(opt_yield & SEARCH_YIELD)
+		if(opt_yield & LOOKUP_YIELD)
 			sched_yield();
 
 		// Update counter

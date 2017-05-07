@@ -4,12 +4,14 @@
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
-#include <sched.h>
 #include <ctype.h> // isdigit()
+#include <sched.h>
+#include "SortedList.h"
 
 // Global variables
-int numthreads = 1, numIters = 1, opt_yield = 0, spin_lock = 0;
+int numthreads = 1, numIters = 1, opt_yield = 0, spin_lock = 0, numlists = 1;
 char m_sync = 0;
+char* m_yield;
 pthread_mutex_t mutex;
 
 // Basic add routine
@@ -20,10 +22,34 @@ void add(long long *pointer, long long value){
         *pointer = sum;
 }
 
+// Check for correct sync arguments
 void check_sync(){
-	if(m_sync != 'm' && m_sync != 's' && m_sync != 'c'){
-		fprintf(stderr, "Incorrect argument for sync. Use m for mutex, s for spin-lock, or c for compare-and-swap\n");
+	if(m_sync != 'm' && m_sync != 's'){
+		fprintf(stderr, "Incorrect argument for sync. \
+			Use m for mutex, s for spin-lock\n");
 		exit(1);
+	}
+}
+
+// Check for correct yield arguments
+void check_yield(){
+
+	char curr = *m_yield;
+	int index = 0;
+	while(curr != '\0'){
+		if(curr == 'i')
+			opt_yield |= INSERT_YIELD;
+		else if(curr == 'd')
+			opt_yield |= DELETE_YIELD;
+		else if(curr == 'l')
+			opt_yield |= LOOKUP_YIELD;
+		else{
+			fprintf(stderr, "Incorrect argument for sync. \
+				Use i for insertion, s for deletion, l for lookups\n");
+			exit(1);
+		}
+		index++;
+		curr = *(m_yield+index);
 	}
 }
 
@@ -116,36 +142,41 @@ int main(int argc, char *argv[]){
 	struct option longopts[] = {
 		{"threads", 	required_argument, 	NULL, 't'},
 		{"iterations", 	required_argument, 	NULL, 'i'},
-		{"yield", 		no_argument, 		NULL, 'y'},
+		{"yield", 		required_argument, 	NULL, 'y'},
 		{"sync", 		required_argument, 	NULL, 's'},
 		{0,0,0,0}
 	};
 
-	while((opt = getopt_long(argc, argv, "t:i:ys:", longopts, NULL)) != -1){
+	while((opt = getopt_long(argc, argv, "t:i:y:s:", longopts, NULL)) != -1){
 		switch(opt){
 			case 't':
 				numthreads = atoi(optarg);
 				if(!isdigit(*optarg)){
-					fprintf(stderr, "Incorrect argument for threads. Input an integer or use default of value 1\n");
+					fprintf(stderr, "Incorrect argument for threads. \
+						Input an integer or use default of value 1\n");
 					exit(1);
 				}
 				break;
 			case 'i':
 				numIters = atoi(optarg);
 				if(!isdigit(*optarg)){
-					fprintf(stderr, "Incorrect argument for iterations. Input an integer or use default of value 1\n");
+					fprintf(stderr, "Incorrect argument for iterations. \
+						Input an integer or use default of value 1\n");
 					exit(1);
 				}
 				break;
 			case 'y':
 				opt_yield = 1;
+				m_yield = optarg;
+				check_yield();
 				break;
 			case 's':
 				m_sync = *optarg;
 				check_sync();
 				break;
 			default:
-				fprintf(stderr, "Usage: ./lab1b [--threads=numthreads] [--iterations=iterations] [--yield] [--sync=[m, s, or c]]\n");
+				fprintf(stderr, "Usage: ./lab1b --threads=numthreads \
+					--iterations=numIters --yield=[ild] --sync=[ms]\n");
 				exit(1);
 				break;
 		}
@@ -154,6 +185,10 @@ int main(int argc, char *argv[]){
 	// Initialize mutex
 	if(m_sync == 'm')
 		pthread_mutex_init(&mutex, NULL);
+
+	// Initialize empty list
+
+	// Create and initialize with random keys the required number of list elements
 
 	// Start timer
 	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
@@ -168,7 +203,7 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	// Create threads
+/*	// Create threads
 	int i;
 	for(i = 0; i < numthreads; i++){
 		if(pthread_create(threads+i, NULL, worker, &counter) != 0){
@@ -184,7 +219,7 @@ int main(int argc, char *argv[]){
 			exit(1);
 		}
 	}
-
+*/
 	// Stop timer
 	if(clock_gettime(CLOCK_MONOTONIC, &end) == -1){
 		fprintf(stderr, "Error stopping timer\n");
@@ -192,16 +227,36 @@ int main(int argc, char *argv[]){
 	}
 
 	// Calculations
-	int numops = numthreads * numIters * 2;
+	int numops = numthreads * numIters * 3;
 	long long total_time = 1000000000 * (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec);
 	long long avg_time_per_op = total_time/numops;
 
 	// Create name
 	char message[15] = "add";
-	if(opt_yield){
-		const char name[7] = "-yield";
+	
+	// Add yield tags
+	if(!opt_yield){
+		const char name[6] = "-none";
 		strcat(message, name);
 	}
+	else{
+		const char dash[2] = "-";
+		strcat(message, dash);
+		if(opt_yield & INSERT_YIELD){
+			const char name[2] = "i";
+			strcat(message, name);
+		}
+		if(opt_yield & DELETE_YIELD){
+			const char name[2] = "d";
+			strcat(message, name);
+		}
+		if(opt_yield & LOOKUP_YIELD){
+			const char name[2] = "l";
+			strcat(message, name);
+		}
+	}
+
+	// Add sync tags
 	if(m_sync == 'm'){
 		const char name[3] = "-m";
 		strcat(message, name);
@@ -210,18 +265,14 @@ int main(int argc, char *argv[]){
 		const char name[3] = "-s";
 		strcat(message, name);
 	}
-	else if(m_sync == 'c'){
-		const char name[3] = "-c";
-		strcat(message, name);
-	}
 	else{
 		const char name[6] = "-none";
 		strcat(message, name);
 	}
 
 	// Print CSV
-	fprintf(stdout, "%s,%d,%d,%d,%lld,%lld,%lld\n",
-		message,numthreads,numIters,numops,total_time,avg_time_per_op,counter);
+	fprintf(stdout, "%s,%d,%d,%d,%d,%lld,%lld,\n",
+		message,numthreads,numIters,numlists,numops,total_time,avg_time_per_op);
 
 	return 0;
 }
