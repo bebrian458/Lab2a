@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS =
+CFLAGS = -pthread
 
 
 build: lab2_add
 
 lab2_add: lab2_add.c
-	$(CC) $< -o $@
+	$(CC) $(CFLAGS) $< -o $@
 
 tests: build
 

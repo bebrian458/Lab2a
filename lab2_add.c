@@ -7,7 +7,7 @@
 #include <ctype.h> // isdigit()
 
 // Global variables
-int numthreads = 1, numIters = 1, opt_yield = 0, sync_lock = 0;
+int numthreads = 1, numIters = 1, opt_yield = 0, spin_lock = 0;
 char m_sync = 0;
 pthread_mutex_t mutex;
 
@@ -35,10 +35,10 @@ void* worker(void* counter){
 
 		// Spin-lock
 		else if(m_sync == 's'){
-			while(__sync_lock_test_and_set(&sync_lock, 1))
+			while(__sync_lock_test_and_set(&spin_lock, 1))
 				;
 			add((long long *) counter, 1);
-			__sync_lock_release(&sync_lock);
+			__sync_lock_release(&spin_lock);
 		}
 
 		// Compare-and-swap
@@ -71,10 +71,10 @@ void* worker(void* counter){
 
 		// Spin-lock
 		else if(m_sync == 's'){
-			while(__sync_lock_test_and_set(&sync_lock, 1))
+			while(__sync_lock_test_and_set(&spin_lock, 1))
 				;
 			add((long long *) counter, -1);
-			__sync_lock_release(&sync_lock);
+			__sync_lock_release(&spin_lock);
 		}
 
 		// Compare-and-swap
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]){
 			case 's':
 				m_sync = *optarg;
 				if(m_sync != 'm' && m_sync != 's' && m_sync != 'c'){
-					fprintf(stderr, "Incorrect argument for sync. Use m for mutex, s for spin-lock, or c for comapre-and-swap\n");
+					fprintf(stderr, "Incorrect argument for sync. Use m for mutex, s for spin-lock, or c for compare-and-swap\n");
 					exit(2);
 				}
 				break;
