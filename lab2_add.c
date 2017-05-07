@@ -180,7 +180,7 @@ int main(int argc, char *argv[]){
 	// Join threads
 	for(i = 0; i < numthreads; i++){
 		if(pthread_join(*(threads+i), NULL) != 0){
-			fprintf(stderr, "Error creating threads\n");
+			fprintf(stderr, "Error joining threads\n");
 			exit(1);
 		}
 	}
@@ -190,6 +190,9 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Error stopping timer\n");
 		exit(1);
 	}
+
+	// Free allocated memory
+	free(threads);
 
 	// Calculations
 	int numops = numthreads * numIters * 2;
