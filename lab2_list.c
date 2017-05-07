@@ -42,7 +42,7 @@ void check_yield(){
 		else if(curr == 'l')
 			opt_yield |= LOOKUP_YIELD;
 		else{
-			fprintf(stderr, "Incorrect argument for sync. Use i for insertion, s for deletion, l for lookups\n");
+			fprintf(stderr, "Incorrect argument for yield. Use i for insertion, s for deletion, l for lookups\n");
 			exit(1);
 		}
 		index++;
@@ -88,7 +88,28 @@ void* worker(void* tID){
 	// Insert elements into list
 	int i;
 	for(i = *(int*)tID; i < numelems; i+= numthreads){
-		SortedList_insert(list, &elements[i]);
+		switch(m_sync){
+			
+			// Mutex
+			case 'm':
+				pthread_mutex_lock(&mutex);
+				SortedList_insert(list, &elements[i]);
+				pthread_mutex_unlock(&mutex);
+				break;
+			
+			// Spin-lock
+			case 's':
+				while(__sync_lock_test_and_set(&spin_lock, 1))
+					;
+				SortedList_insert(list, &elements[i]);
+				__sync_lock_release(&spin_lock);
+				break;
+
+			// Without locks
+			default:
+				SortedList_insert(list, &elements[i]);
+				break;
+		}
 	}
 
 	// Get the list length
@@ -97,7 +118,26 @@ void* worker(void* tID){
 	// Look up and delete each of the keys it had previously inserted
 	int j;
 	for(j = *(int*)tID; j < numelems; j+= numthreads){
-		SortedList_delete(SortedList_lookup(list, elements[j].key));
+		switch(m_sync){
+
+			// Mutex
+			case 'm':
+				pthread_mutex_lock(&mutex);
+				SortedList_delete(SortedList_lookup(list, elements[j].key));
+				pthread_mutex_unlock(&mutex);
+
+			// Spin-lock
+			case 's':
+				while(__sync_lock_test_and_set(&spin_lock, 1))
+					;
+				SortedList_delete(SortedList_lookup(list, elements[j].key));
+				__sync_lock_release(&spin_lock);
+
+			// Without locks
+			default:
+				SortedList_delete(SortedList_lookup(list, elements[j].key));
+				break;
+		}
 	}
 
 	// Get the list length
@@ -200,6 +240,7 @@ int main(int argc, char *argv[]){
 	// Create threads
 	int i;
 	for(i = 0; i < numthreads; i++){
+		tIDs[i] = i;
 		if(pthread_create(threads+i, NULL, worker, &tIDs[i]) != 0){
 			fprintf(stderr, "Error creating threads\n");
 			exit(1);
@@ -271,12 +312,12 @@ int main(int argc, char *argv[]){
 	}
 
 	// Print CSV
-	fprintf(stdout, "%s,%d,%d,%d,%d,%lld,%lld,\n",
+	fprintf(stdout, "%s,%d,%d,%d,%d,%lld,%lld\n",
 		message,numthreads,numIters,numlists,numops,total_time,avg_time_per_op);
 
 	// Check if the length of list is zero
 	if(listlen != 0){
-		fprintf(stderr, "Error. List length is not zero; it is: %d\n",listlen);
+		fprintf(stderr, "Error: List length is not zero; it is: %d\n",listlen);
 		exit(2);
 	}
 
