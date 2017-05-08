@@ -264,7 +264,7 @@ tests: build
 
 graphs: build
 	gnuplot lab2_add.gp
-#	gnuplot lab2_list.gp lab2_list.csv
+	gnuplot lab2_list.gp 
 
 dist:
 
