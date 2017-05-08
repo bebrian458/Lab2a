@@ -114,6 +114,12 @@ void* worker(void* tID){
 
 	// Get the list length
 	listlen = SortedList_length(list);
+	
+	// Check if the length of list is zero
+	if(listlen == -1){
+		fprintf(stderr, "Error: List length is corrupted after insertion; it is: %d\n",listlen);
+		exit(2);
+	}
 
 	// Look up and delete each of the keys it had previously inserted
 	int j;
@@ -142,6 +148,12 @@ void* worker(void* tID){
 
 	// Get the list length
 	listlen = SortedList_length(list);
+	
+	// Check if the length of list is zero
+	if(listlen != 0){
+		fprintf(stderr, "Error: List length is corrupted after deletion; it is: %d\n",listlen);
+		exit(2);
+	}
 
 	return NULL;
 }	
@@ -218,12 +230,6 @@ int main(int argc, char *argv[]){
 	}
 	make_keys();
 
-	// Start timer
-	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
-		fprintf(stderr, "Error starting timer\n");
-		exit(1);
-	}
-
 	// Allocate memory for threads
 	pthread_t *threads = malloc(numthreads*sizeof(pthread_t));
 	if(threads == NULL){
@@ -235,6 +241,12 @@ int main(int argc, char *argv[]){
 	int* tIDs = malloc(numthreads * sizeof(int));
 	if(tIDs == NULL){
 		fprintf(stderr, "Error allocating memory for thread IDs\n");
+	}
+
+	// Start timer
+	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+		fprintf(stderr, "Error starting timer\n");
+		exit(1);
 	}
 
 	// Create threads
@@ -273,7 +285,7 @@ int main(int argc, char *argv[]){
 	long long avg_time_per_op = total_time/numops;
 
 	// Create name
-	char message[15] = "add";
+	char message[15] = "list";
 	
 	// Add yield tags
 	if(!opt_yield){
@@ -314,12 +326,6 @@ int main(int argc, char *argv[]){
 	// Print CSV
 	fprintf(stdout, "%s,%d,%d,%d,%d,%lld,%lld\n",
 		message,numthreads,numIters,numlists,numops,total_time,avg_time_per_op);
-
-	// Check if the length of list is zero
-	if(listlen != 0){
-		fprintf(stderr, "Error: List length is not zero; it is: %d\n",listlen);
-		exit(2);
-	}
 
 	exit(0);
 }

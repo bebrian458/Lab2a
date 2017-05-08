@@ -161,16 +161,16 @@ int main(int argc, char *argv[]){
 	if(m_sync == 'm')
 		pthread_mutex_init(&mutex, NULL);
 
-	// Start timer
-	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
-		fprintf(stderr, "Error starting timer\n");
-		exit(1);
-	}
-
 	// Allocate memory for threads
 	pthread_t *threads = malloc(numthreads*sizeof(pthread_t));
 	if(threads == NULL){
 		fprintf(stderr, "Error allocating memory for threads\n");
+		exit(1);
+	}
+
+	// Start timer
+	if(clock_gettime(CLOCK_MONOTONIC, &start) == -1){
+		fprintf(stderr, "Error starting timer\n");
 		exit(1);
 	}
 
