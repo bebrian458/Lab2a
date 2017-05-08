@@ -263,7 +263,7 @@ tests: build
 	./lab2_list --threads=24 --iterations=1000 --sync=s >> lab2_list.csv
 
 graphs: build
-	gnuplot lab2_add.gp lab2_add.csv
+	gnuplot lab2_add.gp
 #	gnuplot lab2_list.gp lab2_list.csv
 
 dist:
