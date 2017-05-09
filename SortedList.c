@@ -95,8 +95,8 @@ int SortedList_length(SortedList_t *list){
 	int counter = 0;
 
 	// If there is no list, do nothing
-	if(list == NULL)
-		return counter;
+	if(list == NULL || list->key != NULL)
+		return -1;
 
 	// Start from where head's (list) next is pointing to
 	SortedListElement_t *curr = list->next;

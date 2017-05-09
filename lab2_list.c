@@ -148,12 +148,6 @@ void* worker(void* tID){
 
 	// Get the list length
 	listlen = SortedList_length(list);
-	
-	// Check if the length of list is zero
-	if(listlen != 0){
-		fprintf(stderr, "Error: List length is corrupted after deletion; it is: %d\n",listlen);
-		exit(2);
-	}
 
 	return NULL;
 }	
@@ -255,6 +249,12 @@ int main(int argc, char *argv[]){
 		tIDs[i] = i;
 		if(pthread_create(threads+i, NULL, worker, &tIDs[i]) != 0){
 			fprintf(stderr, "Error creating threads\n");
+
+			// Free memory before exiting
+			free(tIDs);
+			free(list);
+			free(elements);
+			free(threads);
 			exit(1);
 		}
 	}
@@ -263,6 +263,12 @@ int main(int argc, char *argv[]){
 	for(i = 0; i < numthreads; i++){
 		if(pthread_join(*(threads+i), NULL) != 0){
 			fprintf(stderr, "Error joining threads\n");
+
+			// Free memory before exiting
+			free(tIDs);
+			free(list);
+			free(elements);
+			free(threads);
 			exit(1);
 		}
 	}
@@ -278,6 +284,12 @@ int main(int argc, char *argv[]){
 	free(list);
 	free(elements);
 	free(threads);
+
+	// Check if the length of list is zero
+	if(listlen != 0){
+		fprintf(stderr, "Error: List length is corrupted after deletion; it is: %d\n",listlen);
+		exit(2);
+	}
 
 	// Calculations
 	int numops = numthreads * numIters * 3;
