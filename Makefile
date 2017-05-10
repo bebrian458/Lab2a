@@ -1,6 +1,7 @@
 CC = gcc
 DEBUG = 
 LFLAGS = -pthread
+DIST = lab2_add.c lab2_list.c SortedList.c SortedList.h README Makefile *.png *.csv
 
 # source code
 ADD = lab2_add.c
@@ -267,14 +268,7 @@ graphs: build
 	gnuplot lab2_list.gp 
 
 dist:
-
+	tar -czf lab2a-204612203.tar.gz $(DIST)
 clean:
-	rm -f lab2_add lab2_list *.csv
+	rm -f lab2_add lab2_list *.csv *.png *.tar.gz
 
-
-
-# tests: Makefile build
-# 	./lab3_add thread=2 iterations=100 >> lab2_add.csv
-
-# graphs: Makefile build
-# 	gnuplot lab2_add.gp

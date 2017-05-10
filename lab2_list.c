@@ -86,7 +86,7 @@ void make_keys(){
 void* worker(void* tID){
 
 	// Insert elements into list
-	int i;
+/*	int i;
 	for(i = *(int*)tID; i < numelems; i+= numthreads){
 		switch(m_sync){
 			
@@ -111,6 +111,28 @@ void* worker(void* tID){
 				break;
 		}
 	}
+*/
+	switch(m_sync){
+	
+	// Mutex
+	case 'm':
+		pthread_mutex_lock(&mutex);
+		break;
+	
+	// Spin-lock
+	case 's':
+		while(__sync_lock_test_and_set(&spin_lock, 1))
+			;
+		break;
+
+	// Without locks
+	default:
+		break;
+	}
+
+	int i;
+	for(i = *(int*)tID; i < numelems; i+= numthreads)
+		SortedList_insert(list, &elements[i]);
 
 	// Get the list length
 	listlen = SortedList_length(list);
@@ -122,29 +144,51 @@ void* worker(void* tID){
 	}
 
 	// Look up and delete each of the keys it had previously inserted
+	// int j;
+	// for(j = *(int*)tID; j < numelems; j+= numthreads){
+	// 	switch(m_sync){
+
+	// 		// Mutex
+	// 		case 'm':
+	// 			pthread_mutex_lock(&mutex);
+	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
+	// 			pthread_mutex_unlock(&mutex);
+
+	// 		// Spin-lock
+	// 		case 's':
+	// 			while(__sync_lock_test_and_set(&spin_lock, 1))
+	// 				;
+	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
+	// 			__sync_lock_release(&spin_lock);
+
+	// 		// Without locks
+	// 		default:
+	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
+	// 			break;
+	// 	}
+	// }
+
 	int j;
-	for(j = *(int*)tID; j < numelems; j+= numthreads){
-		switch(m_sync){
+	for(j = *(int*)tID; j < numelems; j+= numthreads)
+		SortedList_delete(SortedList_lookup(list, elements[j].key));
 
-			// Mutex
-			case 'm':
-				pthread_mutex_lock(&mutex);
-				SortedList_delete(SortedList_lookup(list, elements[j].key));
-				pthread_mutex_unlock(&mutex);
+	switch(m_sync){
+	
+		// Mutex
+		case 'm':
+			pthread_mutex_unlock(&mutex);
+			break;
+		
+		// Spin-lock
+		case 's':
+			__sync_lock_release(&spin_lock);
+			break;
 
-			// Spin-lock
-			case 's':
-				while(__sync_lock_test_and_set(&spin_lock, 1))
-					;
-				SortedList_delete(SortedList_lookup(list, elements[j].key));
-				__sync_lock_release(&spin_lock);
-
-			// Without locks
-			default:
-				SortedList_delete(SortedList_lookup(list, elements[j].key));
-				break;
-		}
+		// Without locks
+		default:
+			break;
 	}
+
 
 	// Get the list length
 	listlen = SortedList_length(list);
