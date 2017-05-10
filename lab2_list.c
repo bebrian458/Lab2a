@@ -113,27 +113,7 @@ void* worker(void* tID){
 	}
 
 	// Get the list length
-	switch(m_sync){
-			// Mutex
-		case 'm':
-			pthread_mutex_lock(&mutex);
-			listlen = SortedList_length(list);
-			pthread_mutex_unlock(&mutex);
-			break;
-		
-		// Spin-lock
-		case 's':
-			while(__sync_lock_test_and_set(&spin_lock, 1))
-				;
-			listlen = SortedList_length(list);
-			__sync_lock_release(&spin_lock);
-			break;
-
-		// Without locks
-		default:
-			listlen = SortedList_length(list);
-			break;
-	}
+	listlen = SortedList_length(list);
 	
 	// Check if the length of list is zero
 	if(listlen == -1){
@@ -167,27 +147,8 @@ void* worker(void* tID){
 	}
 
 	// Get the list length
-	switch(m_sync){
-			// Mutex
-		case 'm':
-			pthread_mutex_lock(&mutex);
-			listlen = SortedList_length(list);
-			pthread_mutex_unlock(&mutex);
-			break;
-		
-		// Spin-lock
-		case 's':
-			while(__sync_lock_test_and_set(&spin_lock, 1))
-				;
-			listlen = SortedList_length(list);
-			__sync_lock_release(&spin_lock);
-			break;
+	listlen = SortedList_length(list);
 
-		// Without locks
-		default:
-			listlen = SortedList_length(list);
-			break;
-	}
 	return NULL;
 }	
 
