@@ -86,32 +86,35 @@ void make_keys(){
 void* worker(void* tID){
 
 	// Insert elements into list
-/*	int i;
-	for(i = *(int*)tID; i < numelems; i+= numthreads){
-		switch(m_sync){
-			
-			// Mutex
-			case 'm':
-				pthread_mutex_lock(&mutex);
-				SortedList_insert(list, &elements[i]);
-				pthread_mutex_unlock(&mutex);
-				break;
-			
-			// Spin-lock
-			case 's':
-				while(__sync_lock_test_and_set(&spin_lock, 1))
-					;
-				SortedList_insert(list, &elements[i]);
-				__sync_lock_release(&spin_lock);
-				break;
 
-			// Without locks
-			default:
-				SortedList_insert(list, &elements[i]);
-				break;
-		}
-	}
-*/
+	/* Fine Grained Locking */
+	// int i;
+	// for(i = *(int*)tID; i < numelems; i+= numthreads){
+	// 	switch(m_sync){
+	//		
+	// 		// Mutex
+	// 		case 'm':
+	// 			pthread_mutex_lock(&mutex);
+	// 			SortedList_insert(list, &elements[i]);
+	// 			pthread_mutex_unlock(&mutex);
+	// 			break;
+	//		
+	// 		// Spin-lock
+	// 		case 's':
+	// 			while(__sync_lock_test_and_set(&spin_lock, 1))
+	// 				;
+	// 			SortedList_insert(list, &elements[i]);
+	// 			__sync_lock_release(&spin_lock);
+	// 			break;
+	//
+	// 		// Without locks
+	// 		default:
+	// 			SortedList_insert(list, &elements[i]);
+	// 			break;
+	// 	}
+	// }
+
+	/* Course Grained Locking */
 	switch(m_sync){
 	
 	// Mutex
@@ -144,23 +147,25 @@ void* worker(void* tID){
 	}
 
 	// Look up and delete each of the keys it had previously inserted
+	
+   	/* Fine Grained Locking */
 	// int j;
 	// for(j = *(int*)tID; j < numelems; j+= numthreads){
 	// 	switch(m_sync){
-
+	//
 	// 		// Mutex
 	// 		case 'm':
 	// 			pthread_mutex_lock(&mutex);
 	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
 	// 			pthread_mutex_unlock(&mutex);
-
+	//
 	// 		// Spin-lock
 	// 		case 's':
 	// 			while(__sync_lock_test_and_set(&spin_lock, 1))
 	// 				;
 	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
 	// 			__sync_lock_release(&spin_lock);
-
+	//
 	// 		// Without locks
 	// 		default:
 	// 			SortedList_delete(SortedList_lookup(list, elements[j].key));
@@ -168,6 +173,8 @@ void* worker(void* tID){
 	// 	}
 	// }
 
+
+	// Course Grained Locking
 	int j;
 	for(j = *(int*)tID; j < numelems; j+= numthreads)
 		SortedList_delete(SortedList_lookup(list, elements[j].key));
